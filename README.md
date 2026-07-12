@@ -30,10 +30,10 @@ My parents own a Hotel at my hometown and they have been working on with the hel
 This project is obviously not finished. It is a long term solo project that I will keep an eye on for the foreseeable future. Once it is finished and whole, I will try to keep working on it, optimizing and fixing any potential bugs.
 
 # Social:
-`discord:`@jay_bulker 
- `Mail:` vasilisouzas@gmail.com
+`discord:`@jay_bulker  
+ `Mail:` vasilisouzas@gmail.com  
  `Instagram:` @Vas_Ouzas
 
 # Similar Projects:
- [HotelDruid](https://www.hoteldruid.com/en/)
+ [HotelDruid](https://www.hoteldruid.com/en/)  
 [MRBS](https://mrbs.sourceforge.io/sshots.php)
