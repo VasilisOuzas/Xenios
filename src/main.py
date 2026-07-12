@@ -12,16 +12,17 @@ ROOMS_FILE = os.path.join(DATA_DIR, "rooms.json")
 RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservations.json")
 
 # ── Μορφή ημερομηνίας: ΗΗ-ΜΜ παντού (χωρίς έτος στο UI) ──────────────────
-DATE_FORMAT = "%d/%m"   # Εισαγωγή + εμφάνιση
+DATE_FORMAT = "%d/%m"   
 CURRENT_YEAR = datetime.now().year
 
+# customize the months accordingly to your prefered language
 GREEK_MONTHS = [
     "", "Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος",
     "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος",
     "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"
 ]
 
-# Χρώματα ──────────────────────────────────────────────────────────────────
+# Colors ──────────────────────────────────────────────────────────────────
 CLR_BG        = "#F0F4F8"
 CLR_PANEL     = "#FFFFFF"
 CLR_HEADER    = "#1A3C5E"
@@ -82,9 +83,8 @@ def validate_phone(phone: str) -> bool:
 class XeniosApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("Xenios · Διαχείριση Κρατήσεων")
+        self.root.title("Xenios · Version_0.5")
         self.root.configure(bg=CLR_BG)
-        self.root.geometry("1280x780")
         self.root.minsize(1000, 680)
 
         self.rooms        = load_json(ROOMS_FILE)
@@ -98,15 +98,37 @@ class XeniosApp:
         self._build_ui()
         self._refresh_calendar()
 
+        # Auto-fit: μετρά τι χρειάζεται και ανοίγει εκεί
+        self.root.update_idletasks()
+        w = self.root.winfo_reqwidth()
+        h = self.root.winfo_reqheight()
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        # Κεντράρισμα στην οθόνη
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
+
     # ── UI skeleton ────────────────────────────────────────────────────────
     def _build_ui(self):
         # Κεφαλίδα
         hdr = tk.Frame(self.root, bg=CLR_HEADER, height=54)
         hdr.pack(fill="x")
         tk.Label(hdr, text="✦  XENIOS", bg=CLR_HEADER, fg="white",
-                 font=("Helvetica", 18, "bold")).pack(side="left", padx=20, pady=12)
-        tk.Label(hdr, text="Σύστημα Διαχείρισης Κρατήσεων", bg=CLR_HEADER,
+                 font=("Playwrite New Zealand", 18, "bold")).pack(side="left", padx=20, pady=12)
+        tk.Label(hdr, text="CUSTOM RESERVATION SOLUTIONS", bg=CLR_HEADER,
                  fg="#A8C6E0", font=("Helvetica", 10)).pack(side="left", pady=14)
+
+        # GitHub link 
+        import webbrowser
+        gh_lbl = tk.Label(hdr, text="🌐  GitHub Repository", bg=CLR_HEADER,
+                          fg="#ECF011", font=("Helvetica", 9, "underline"),
+                          cursor="hand2")
+        gh_lbl.pack(side="right", padx=20, pady=14)
+        gh_lbl.bind("<Button-1>",
+                    lambda e: webbrowser.open("https://github.com/VasilisOuzas/Xenios"))
+        gh_lbl.bind("<Enter>", lambda e: gh_lbl.config(fg="white"))
+        gh_lbl.bind("<Leave>", lambda e: gh_lbl.config(fg="#ECF011"))
 
         # Notebook: Ημερολόγιο / Κράτηση / Διαθεσιμότητα
         style = ttk.Style()
@@ -131,7 +153,7 @@ class XeniosApp:
         self._build_avail_tab()
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 1 · Ημερολόγιο
+    # TAB 1 · Calendar - Matrix
     # ══════════════════════════════════════════════════════════════════════
     def _build_calendar_tab(self):
         top = tk.Frame(self.tab_cal, bg=CLR_BG)
@@ -156,18 +178,30 @@ class XeniosApp:
             tk.Label(legend, text=rtype, bg=CLR_BG,
                      fg=CLR_TEXT, font=("Helvetica", 9)).pack(side="left", padx=(0, 8))
 
-        # Canvas για ημερολόγιο (scrollable)
+        # Canvas για ημερολόγιο (scrollable οριζόντια + κατακόρυφα)
         frame = tk.Frame(self.tab_cal, bg=CLR_BG)
         frame.pack(fill="both", expand=True, padx=10, pady=4)
 
         self.cal_canvas = tk.Canvas(frame, bg=CLR_PANEL,
                                     highlightthickness=1,
                                     highlightbackground=CLR_BORDER)
-        sb = ttk.Scrollbar(frame, orient="horizontal",
-                           command=self.cal_canvas.xview)
-        self.cal_canvas.configure(xscrollcommand=sb.set)
-        sb.pack(side="bottom", fill="x")
+
+        sb_x = ttk.Scrollbar(frame, orient="horizontal",
+                              command=self.cal_canvas.xview)
+        sb_y = ttk.Scrollbar(frame, orient="vertical",
+                              command=self.cal_canvas.yview)
+        self.cal_canvas.configure(xscrollcommand=sb_x.set,
+                                  yscrollcommand=sb_y.set)
+
+        sb_x.pack(side="bottom", fill="x")
+        sb_y.pack(side="right",  fill="y")
         self.cal_canvas.pack(fill="both", expand=True)
+
+        # Mouse wheel για κατακόρυφο scroll
+        self.cal_canvas.bind("<MouseWheel>",
+            lambda e: self.cal_canvas.yview_scroll(-1*(e.delta//120), "units"))
+        self.cal_canvas.bind("<Shift-MouseWheel>",
+            lambda e: self.cal_canvas.xview_scroll(-1*(e.delta//120), "units"))
 
         # Tooltip
         self.tooltip = tk.Toplevel(self.root)
@@ -203,17 +237,17 @@ class XeniosApp:
         days_in_month = calendar.monthrange(year, month)[1]
         today = date.today()
 
-        # Διαστάσεις κελιών
-        DAY_W   = 36   # πλάτος στήλης ημέρας
-        ROW_H   = 34   # ύψος γραμμής δωματίου
-        HDR_H   = 38   # ύψος κεφαλίδας ημερών
-        LABEL_W = 110  # πλάτος αριστερής στήλης δωματίου
+        # Cell Dimentions 
+        DAY_W   = 36   # width of day column
+        ROW_H   = 34   # height of room row
+        HDR_H   = 38   # height of day header
+        LABEL_W = 110  # width of left room column
 
         total_w = LABEL_W + days_in_month * DAY_W + 4
         total_h = HDR_H + len(self.rooms) * ROW_H + 4
         c.configure(scrollregion=(0, 0, total_w, total_h))
 
-        # ── Κεφαλίδα ημερών ─────────────────────────────────────────────
+        # ── Day Headlines ─────────────────────────────────────────────
         for d in range(1, days_in_month + 1):
             x = LABEL_W + (d - 1) * DAY_W
             day_obj = date(year, month, d)
@@ -230,7 +264,7 @@ class XeniosApp:
         c.create_text(LABEL_W / 2, HDR_H / 2, text="Δωμάτιο",
                       fill="white", font=("Helvetica", 9, "bold"))
 
-        # ── Γραμμές δωματίων ────────────────────────────────────────────
+        # ── Room rows ────────────────────────────────────────────
         # Συγκεντρώνω κρατήσεις ανά δωμάτιο για τον τρέχοντα μήνα
         res_by_room: dict[str, list] = {r["id"]: [] for r in self.rooms}
         for res in self.reservations:
