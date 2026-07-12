@@ -17,7 +17,7 @@ Xenios is a custom software solution ,helping people of the hospitality industry
 
 # Current-Version
 > [!IMPORTANT]
-> **This is a solo project and there is no official working version of it yet. Although it is hard to give an official date of its first release, I can easily say that it will be finished before Autumn of 2026
+> **This is a solo project and there is no official working version of it yet. You can give a try the latest unofficial version on `\src`. Please read the `Code Report` before doing so.
 
 
 # Structure
