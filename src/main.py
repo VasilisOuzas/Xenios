@@ -12,7 +12,7 @@ ROOMS_FILE = os.path.join(DATA_DIR, "rooms.json")
 RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservations.json")
 
 # ── Μορφή ημερομηνίας: ΗΗ-ΜΜ παντού (χωρίς έτος στο UI) ──────────────────
-DATE_FORMAT = "%d-%m"   # Εισαγωγή + εμφάνιση
+DATE_FORMAT = "%d/%m"   # Εισαγωγή + εμφάνιση
 CURRENT_YEAR = datetime.now().year
 
 GREEK_MONTHS = [
@@ -34,9 +34,9 @@ CLR_MUTED     = "#7F8C8D"
 CLR_BORDER    = "#D5E0EC"
 
 ROOM_COLORS = {
-    "τετράκλινο": "#8E44AD",
-    "τρίκλινο":   "#16A085",
-    "δίκλινο":    "#2980B9",
+    "Τετράκλινο": "#8E44AD",
+    "Τρίκλινο":   "#16A085",
+    "Δίκλινο":    "#2980B9",
 }
 
 
@@ -56,7 +56,7 @@ def save_json(path, data):
 # ── Ημερομηνίες ────────────────────────────────────────────────────────────
 def parse_date(text: str) -> date:
     """ΗΗ-ΜΜ → date (τρέχον έτος)"""
-    d, m = map(int, text.strip().split("-"))
+    d, m = map(int, text.strip().split("/"))
     return date(CURRENT_YEAR, m, d)
 
 def fmt(d: date) -> str:
@@ -153,7 +153,7 @@ class XeniosApp:
         for rtype, color in ROOM_COLORS.items():
             dot = tk.Label(legend, text="■", fg=color, bg=CLR_BG, font=("Helvetica", 12))
             dot.pack(side="left")
-            tk.Label(legend, text=rtype.capitalize(), bg=CLR_BG,
+            tk.Label(legend, text=rtype, bg=CLR_BG,
                      fg=CLR_TEXT, font=("Helvetica", 9)).pack(side="left", padx=(0, 8))
 
         # Canvas για ημερολόγιο (scrollable)
@@ -280,16 +280,25 @@ class XeniosApp:
                     continue
 
                 clip_start = max(r_start, month_start)
-                clip_end   = min(r_end,   date(year, month, days_in_month + 1)
-                                 if days_in_month < 31 else month_end)
+                # clip_end: δεν ξεπερνά τη μέρα days_in_month+1 του μήνα
+                month_after = date(year + (month // 12), (month % 12) + 1, 1)
+                clip_end    = min(r_end, month_after)
+
+                if clip_start >= clip_end:
+                    continue
 
                 bx0 = LABEL_W + (clip_start.day - 1) * DAY_W + 2
-                bx1 = LABEL_W + (min(clip_end.day, days_in_month)) * DAY_W - 2
+                # Αν clip_end είναι η 1η του επόμενου μήνα → εμφανίζεται μέχρι τέλος μήνα
+                end_day = days_in_month if clip_end >= month_after else clip_end.day - 1
+                end_day = max(end_day, clip_start.day)  # τουλάχιστον 1 μέρα
+                bx1 = LABEL_W + end_day * DAY_W - 2
                 by0, by1 = y0 + 5, y1 - 5
 
                 tag = f"res_{res['id']}"
+                rtype = room.get("type", "")
+                bar_color = ROOM_COLORS.get(rtype, CLR_RESERVED)
                 c.create_rectangle(bx0, by0, bx1, by1,
-                                   fill=CLR_RESERVED, outline="",
+                                   fill=bar_color, outline="",
                                    tags=(tag,))
                 # Κεντράρω το όνομα μέσα στην ταινία
                 mid_x = (bx0 + bx1) / 2
@@ -357,11 +366,11 @@ class XeniosApp:
         self.f_price.grid(row=2, column=3)
 
         # Γραμμή 3: Άφιξη · Αναχώρηση
-        lbl("Άφιξη (ΗΗ-ΜΜ)").grid(row=3, column=0, sticky="e", padx=(0, 6), pady=5)
+        lbl("Άφιξη (ΗΗ/ΜΜ)").grid(row=3, column=0, sticky="e", padx=(0, 6), pady=5)
         self.f_checkin = entry(12)
         self.f_checkin.grid(row=3, column=1, padx=(0, 20))
 
-        lbl("Αναχώρηση (ΗΗ-ΜΜ)").grid(row=3, column=2, sticky="e", padx=(0, 6))
+        lbl("Αναχώρηση (ΗΗ/ΜΜ)").grid(row=3, column=2, sticky="e", padx=(0, 6))
         self.f_checkout = entry(12)
         self.f_checkout.grid(row=3, column=3)
 
@@ -427,10 +436,6 @@ class XeniosApp:
                 messagebox.showerror("Σφάλμα", "Συμπλήρωσε όλα τα πεδία.")
                 return
 
-            if not validate_phone(phone):
-                messagebox.showerror("Σφάλμα", "Μη έγκυρος αριθμός τηλεφώνου.")
-                return
-
             try:
                 price_per_night = float(price_txt)
             except ValueError:
@@ -491,7 +496,7 @@ class XeniosApp:
             self.f_room.set("")
 
         except ValueError as e:
-            messagebox.showerror("Σφάλμα", "Χρησιμοποίησε τη μορφή ΗΗ-ΜΜ για τις ημερομηνίες.")
+            messagebox.showerror("Σφάλμα", "Χρησιμοποίησε τη μορφή ΗΗ/ΜΜ για τις ημερομηνίες.")
 
     def _delete_reservation(self):
         sel = self.tree.selection()
@@ -504,18 +509,12 @@ class XeniosApp:
                                    f"(δωμ. {vals[0]});"):
             return
 
-        # Αναγνώριση μέσω room+name+checkin display
-        checkin_storage = datetime.strptime(
-            str(vals[4]), "%d-%m").replace(year=CURRENT_YEAR).strftime("%Y-%m-%d")
+        # Αναγνώριση μέσω UUID που αποθηκεύεται στο tag του treeview item
+        item_id = self.tree.item(sel[0], "tags")[0]
 
         self.reservations = [
             r for r in self.reservations
-            if not (
-                next((rm for rm in self.rooms if rm["id"] == r["room_id"]),
-                     {}).get("number") == vals[0]
-                and r["name"] == vals[2]
-                and r["checkin"] == checkin_storage
-            )
+            if r["id"] != item_id
         ]
         save_json(RESERVATIONS_FILE, self.reservations)
         self._refresh_list()
@@ -532,7 +531,7 @@ class XeniosApp:
             r_s = date_from_storage(res["checkin"])
             r_e = date_from_storage(res["checkout"])
             nights = (r_e - r_s).days
-            self.tree.insert("", "end", values=(
+            self.tree.insert("", "end", tags=(res["id"],), values=(
                 room["number"],
                 room.get("type", ""),
                 res["name"],
@@ -564,17 +563,17 @@ class XeniosApp:
                                           font=("Helvetica", 10),
                                           relief="solid", bd=1)
 
-        lbl("Άφιξη (ΗΗ-ΜΜ)").grid(row=1, column=0, sticky="e", padx=(0, 6), pady=6)
+        lbl("Άφιξη (ΗΗ/ΜΜ)").grid(row=1, column=0, sticky="e", padx=(0, 6), pady=6)
         self.a_checkin = entry()
         self.a_checkin.grid(row=1, column=1, padx=(0, 20))
 
-        lbl("Αναχώρηση (ΗΗ-ΜΜ)").grid(row=1, column=2, sticky="e", padx=(0, 6))
+        lbl("Αναχώρηση (ΗΗ/ΜΜ)").grid(row=1, column=2, sticky="e", padx=(0, 6))
         self.a_checkout = entry()
         self.a_checkout.grid(row=1, column=3)
 
         lbl("Τύπος δωματίου").grid(row=2, column=0, sticky="e", padx=(0, 6), pady=6)
-        self.a_type = ttk.Combobox(card, values=["Όλοι", "τετράκλινο",
-                                                  "τρίκλινο", "δίκλινο"],
+        self.a_type = ttk.Combobox(card, values=["Όλοι", "Τετράκλινο",
+                                                  "Τρίκλινο", "Δίκλινο"],
                                    width=13, state="readonly",
                                    font=("Helvetica", 10))
         self.a_type.current(0)
@@ -599,7 +598,7 @@ class XeniosApp:
             checkin  = parse_date(self.a_checkin.get())
             checkout = parse_date(self.a_checkout.get())
         except ValueError:
-            messagebox.showerror("Σφάλμα", "Χρησιμοποίησε τη μορφή ΗΗ-ΜΜ.")
+            messagebox.showerror("Σφάλμα", "Χρησιμοποίησε τη μορφή ΗΗ/ΜΜ.")
             return
 
         if checkin >= checkout:
@@ -648,7 +647,7 @@ class XeniosApp:
                 free_t = sum(1 for r in free_rooms if r.get("type") == rtype)
                 total_t = sum(1 for r in self.rooms if r.get("type") == rtype)
                 tk.Label(breakdown,
-                         text=f"■  {rtype.capitalize()}: "
+                         text=f"■  {rtype}: "
                               f"{free_t}/{total_t} διαθέσιμα",
                          fg=color, bg=CLR_PANEL,
                          font=("Helvetica", 10, "bold")).pack(
