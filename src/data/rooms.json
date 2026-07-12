@@ -1,7 +1,12 @@
 [
-  {"id": 1, "number": "101", "type": "double", "price": 60},
-  {"id": 2, "number": "102", "type": "double", "price": 60},
-  {"id": 3, "number": "103", "type": "single", "price": 40},
-  {"id": 4, "number": "104", "type": "single", "price": 40},
-  {"id": 5, "number": "105", "type": "suite", "price": 100}
+  {"id": 1, "number": "101", "type": "Δίκλινο"},
+  {"id": 2, "number": "102", "type": "Δίκλινο"},
+  {"id": 3, "number": "103", "type": "Τρίκλινο"},
+  {"id": 4, "number": "104", "type": "Δίκλινο"},
+  {"id": 5, "number": "105", "type": "Δίκλινο"},
+  {"id": 6, "number": "106", "type": "Δίκλινο"},
+  {"id": 7, "number": "107", "type": "Δίκλινο"},
+  {"id": 8, "number": "108", "type": "Δίκλινο"},
+  {"id": 9, "number": "109", "type": "Τρίκλινο"},
+  {"id": 10, "number": "110", "type": "Τετράκλινο"}
 ]
