@@ -17,7 +17,6 @@ The data input/output stream is hosted via .json files that are saved in the `/d
 
 
  # Issues 
-- The program counts one more staying than it should. By default when you make a reservation for, let's say 17 - 27, the customer would stay for 10 nights and on the 27th he would give up the room ending up with 10 nights instead of 1 that the coloured matrix shows. This way, people can rent the room again on the 27th after the first customer leaves.
 - Still the GUI could be more visually appealing
 - There are more interactive stuff missing from the panel
 - I want tot debloat the code by removing some useless stuff about phone number validation added by claude.
