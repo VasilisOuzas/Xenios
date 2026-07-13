@@ -1,1 +1,32 @@
-[]
+[
+    {
+        "id": "1436fa39-617c-4a98-bfeb-a7a22ec079fa",
+        "room_id": 6,
+        "name": "Ούζας Β",
+        "contact": "6955471278",
+        "checkin": "2026-07-13",
+        "checkout": "2026-07-24",
+        "price_per_night": 45.0,
+        "total_price": 495.0
+    },
+    {
+        "id": "b832be91-100b-4933-a7bf-680c137d95a7",
+        "room_id": 9,
+        "name": "Χαιρόπουλος",
+        "contact": "4",
+        "checkin": "2026-07-24",
+        "checkout": "2026-08-24",
+        "price_per_night": 40.0,
+        "total_price": 1240.0
+    },
+    {
+        "id": "e7c019b3-1379-4f2c-96f4-8737dc8ac12e",
+        "room_id": 10,
+        "name": "Ηλιόπουλος",
+        "contact": "4",
+        "checkin": "2026-07-15",
+        "checkout": "2026-08-01",
+        "price_per_night": 70.0,
+        "total_price": 1190.0
+    }
+]
