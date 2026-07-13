@@ -74,9 +74,8 @@ def to_storage(d: date) -> str:
 def dates_overlap(s1, e1, s2, e2):
     return s1 < e2 and e1 > s2
 
-def validate_phone(phone: str) -> bool:
-    digits = phone.replace(" ", "").replace("-", "").replace("+", "")
-    return digits.isdigit() and 8 <= len(digits) <= 15
+def validate_contact(contact: str) -> bool:
+    return 0 <= len(contact.strip()) <= 100
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -343,9 +342,9 @@ class XeniosApp:
                               tags=(tag,))
 
                 # Tooltip
-                tip_text = (f"{res['name']}  |  {res['phone']}\n"
+                tip_text = (f"{res['name']}  | Επικοινωνία: {res['contact']}\n"
                             f"Άφιξη: {fmt(r_start)}  Αναχ: {fmt(r_end)}\n"
-                            f"Σύνολο: {res.get('total_price', '—')}€")
+                            f"Τιμή ανά βράδυ: {res.get('price_per_night', '—')}€")
                 c.tag_bind(tag, "<Enter>",
                            lambda e, t=tip_text: self._show_tip(e, t))
                 c.tag_bind(tag, "<Leave>", self._hide_tip)
@@ -384,9 +383,9 @@ class XeniosApp:
         self.f_name = entry()
         self.f_name.grid(row=1, column=1, padx=(0, 20))
 
-        lbl("Τηλέφωνο").grid(row=1, column=2, sticky="e", padx=(0, 6))
-        self.f_phone = entry(16)
-        self.f_phone.grid(row=1, column=3)
+        lbl("Στοιχεία Επικοινωνίας").grid(row=1, column=2, sticky="e", padx=(0, 6))
+        self.f_contact = entry(24)
+        self.f_contact.grid(row=1, column=3)
 
         # Γραμμή 2: Δωμάτιο · Τιμή/βράδυ
         lbl("Δωμάτιο").grid(row=2, column=0, sticky="e", padx=(0, 6), pady=5)
@@ -433,13 +432,13 @@ class XeniosApp:
         sep = tk.Frame(self.tab_form, bg=CLR_BORDER, height=1)
         sep.pack(fill="x", padx=20, pady=4)
 
-        cols = ("room", "type", "name", "phone", "checkin", "checkout", "nights", "total")
+        cols = ("room", "type", "name", "contact", "checkin", "checkout", "nights", "total")
         col_lbl = {
             "room": "Δωμάτιο", "type": "Τύπος", "name": "Πελάτης",
-            "phone": "Τηλέφωνο", "checkin": "Άφιξη", "checkout": "Αναχώρηση",
+            "contact": "Στοιχεία Επικοινωνίας", "checkin": "Άφιξη", "checkout": "Αναχώρηση",
             "nights": "Νύχτες", "total": "Σύνολο (€)"
         }
-        col_w = {"room": 80, "type": 90, "name": 160, "phone": 110,
+        col_w = {"room": 80, "type": 90, "name": 160, "contact": 110,
                  "checkin": 75, "checkout": 80, "nights": 60, "total": 90}
 
         tree_frame = tk.Frame(self.tab_form, bg=CLR_BG)
@@ -462,11 +461,11 @@ class XeniosApp:
     def _add_reservation(self):
         try:
             name  = self.f_name.get().strip()
-            phone = self.f_phone.get().strip()
+            contact = self.f_contact.get().strip()
             price_txt = self.f_price.get().strip()
             room_sel  = self.f_room.current()
 
-            if room_sel < 0 or not name or not phone or not price_txt:
+            if room_sel < 0 or not name or not contact or not price_txt:
                 messagebox.showerror("Σφάλμα", "Συμπλήρωσε όλα τα πεδία.")
                 return
 
@@ -506,7 +505,7 @@ class XeniosApp:
                 "id":             str(uuid.uuid4()),
                 "room_id":        selected_room["id"],
                 "name":           name,
-                "phone":          phone,
+                "contact":        contact,
                 "checkin":        to_storage(checkin),
                 "checkout":       to_storage(checkout),
                 "price_per_night": price_per_night,
@@ -524,7 +523,7 @@ class XeniosApp:
                      f"({nights} νύχτες × {price_per_night}€ = {total_price}€)"
             )
             # Καθαρισμός πεδίων
-            for w in (self.f_name, self.f_phone, self.f_price,
+            for w in (self.f_name, self.f_contact, self.f_price,
                       self.f_checkin, self.f_checkout):
                 w.delete(0, "end")
             self.f_room.set("")
@@ -569,7 +568,7 @@ class XeniosApp:
                 room["number"],
                 room.get("type", ""),
                 res["name"],
-                res["phone"],
+                res["contact"],
                 fmt(r_s),
                 fmt(r_e),
                 nights,
