@@ -12,16 +12,17 @@ ROOMS_FILE = os.path.join(DATA_DIR, "rooms.json")
 RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservations.json")
 
 # ── Μορφή ημερομηνίας: ΗΗ-ΜΜ παντού (χωρίς έτος στο UI) ──────────────────
-DATE_FORMAT = "%d/%m"   # Εισαγωγή + εμφάνιση
+DATE_FORMAT = "%d/%m"   
 CURRENT_YEAR = datetime.now().year
 
+# customize the months accordingly to your prefered language
 GREEK_MONTHS = [
     "", "Ιανουάριος", "Φεβρουάριος", "Μάρτιος", "Απρίλιος",
     "Μάιος", "Ιούνιος", "Ιούλιος", "Αύγουστος",
     "Σεπτέμβριος", "Οκτώβριος", "Νοέμβριος", "Δεκέμβριος"
 ]
 
-# Χρώματα ──────────────────────────────────────────────────────────────────
+# Colors ──────────────────────────────────────────────────────────────────
 CLR_BG        = "#F0F4F8"
 CLR_PANEL     = "#FFFFFF"
 CLR_HEADER    = "#1A3C5E"
@@ -34,9 +35,9 @@ CLR_MUTED     = "#7F8C8D"
 CLR_BORDER    = "#D5E0EC"
 
 ROOM_COLORS = {
-    "τετράκλινο": "#8E44AD",
-    "τρίκλινο":   "#16A085",
-    "δίκλινο":    "#2980B9",
+    "Τετράκλινο": "#8E44AD",
+    "Τρίκλινο":   "#16A085",
+    "Δίκλινο":    "#2980B9",
 }
 
 
@@ -56,7 +57,7 @@ def save_json(path, data):
 # ── Ημερομηνίες ────────────────────────────────────────────────────────────
 def parse_date(text: str) -> date:
     """ΗΗ-ΜΜ → date (τρέχον έτος)"""
-    d, m = map(int, text.strip().split("-"))
+    d, m = map(int, text.strip().split("/"))
     return date(CURRENT_YEAR, m, d)
 
 def fmt(d: date) -> str:
@@ -73,18 +74,16 @@ def to_storage(d: date) -> str:
 def dates_overlap(s1, e1, s2, e2):
     return s1 < e2 and e1 > s2
 
-def validate_phone(phone: str) -> bool:
-    digits = phone.replace(" ", "").replace("-", "").replace("+", "")
-    return digits.isdigit() and 8 <= len(digits) <= 15
+def validate_contact(contact: str) -> bool:
+    return 0 <= len(contact.strip()) <= 100
 
 
 # ══════════════════════════════════════════════════════════════════════════
 class XeniosApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("Xenios · Διαχείριση Κρατήσεων")
+        self.root.title("Xenios · Version_0.5")
         self.root.configure(bg=CLR_BG)
-        self.root.geometry("1280x780")
         self.root.minsize(1000, 680)
 
         self.rooms        = load_json(ROOMS_FILE)
@@ -98,15 +97,37 @@ class XeniosApp:
         self._build_ui()
         self._refresh_calendar()
 
+        # Auto-fit: μετρά τι χρειάζεται και ανοίγει εκεί
+        self.root.update_idletasks()
+        w = self.root.winfo_reqwidth()
+        h = self.root.winfo_reqheight()
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        # Κεντράρισμα στην οθόνη
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
+
     # ── UI skeleton ────────────────────────────────────────────────────────
     def _build_ui(self):
         # Κεφαλίδα
         hdr = tk.Frame(self.root, bg=CLR_HEADER, height=54)
         hdr.pack(fill="x")
         tk.Label(hdr, text="✦  XENIOS", bg=CLR_HEADER, fg="white",
-                 font=("Helvetica", 18, "bold")).pack(side="left", padx=20, pady=12)
-        tk.Label(hdr, text="Σύστημα Διαχείρισης Κρατήσεων", bg=CLR_HEADER,
+                 font=("Playwrite New Zealand", 18, "bold")).pack(side="left", padx=20, pady=12)
+        tk.Label(hdr, text="CUSTOM RESERVATION SOLUTIONS", bg=CLR_HEADER,
                  fg="#A8C6E0", font=("Helvetica", 10)).pack(side="left", pady=14)
+
+        # GitHub link 
+        import webbrowser
+        gh_lbl = tk.Label(hdr, text="🌐  GitHub Repository", bg=CLR_HEADER,
+                          fg="#ECF011", font=("Helvetica", 9, "underline"),
+                          cursor="hand2")
+        gh_lbl.pack(side="right", padx=20, pady=14)
+        gh_lbl.bind("<Button-1>",
+                    lambda e: webbrowser.open("https://github.com/VasilisOuzas/Xenios"))
+        gh_lbl.bind("<Enter>", lambda e: gh_lbl.config(fg="white"))
+        gh_lbl.bind("<Leave>", lambda e: gh_lbl.config(fg="#ECF011"))
 
         # Notebook: Ημερολόγιο / Κράτηση / Διαθεσιμότητα
         style = ttk.Style()
@@ -131,7 +152,7 @@ class XeniosApp:
         self._build_avail_tab()
 
     # ══════════════════════════════════════════════════════════════════════
-    # TAB 1 · Ημερολόγιο
+    # TAB 1 · Calendar - Matrix
     # ══════════════════════════════════════════════════════════════════════
     def _build_calendar_tab(self):
         top = tk.Frame(self.tab_cal, bg=CLR_BG)
@@ -153,21 +174,33 @@ class XeniosApp:
         for rtype, color in ROOM_COLORS.items():
             dot = tk.Label(legend, text="■", fg=color, bg=CLR_BG, font=("Helvetica", 12))
             dot.pack(side="left")
-            tk.Label(legend, text=rtype.capitalize(), bg=CLR_BG,
+            tk.Label(legend, text=rtype, bg=CLR_BG,
                      fg=CLR_TEXT, font=("Helvetica", 9)).pack(side="left", padx=(0, 8))
 
-        # Canvas για ημερολόγιο (scrollable)
+        # Canvas για ημερολόγιο (scrollable οριζόντια + κατακόρυφα)
         frame = tk.Frame(self.tab_cal, bg=CLR_BG)
         frame.pack(fill="both", expand=True, padx=10, pady=4)
 
         self.cal_canvas = tk.Canvas(frame, bg=CLR_PANEL,
                                     highlightthickness=1,
                                     highlightbackground=CLR_BORDER)
-        sb = ttk.Scrollbar(frame, orient="horizontal",
-                           command=self.cal_canvas.xview)
-        self.cal_canvas.configure(xscrollcommand=sb.set)
-        sb.pack(side="bottom", fill="x")
+
+        sb_x = ttk.Scrollbar(frame, orient="horizontal",
+                              command=self.cal_canvas.xview)
+        sb_y = ttk.Scrollbar(frame, orient="vertical",
+                              command=self.cal_canvas.yview)
+        self.cal_canvas.configure(xscrollcommand=sb_x.set,
+                                  yscrollcommand=sb_y.set)
+
+        sb_x.pack(side="bottom", fill="x")
+        sb_y.pack(side="right",  fill="y")
         self.cal_canvas.pack(fill="both", expand=True)
+
+        # Mouse wheel για κατακόρυφο scroll
+        self.cal_canvas.bind("<MouseWheel>",
+            lambda e: self.cal_canvas.yview_scroll(-1*(e.delta//120), "units"))
+        self.cal_canvas.bind("<Shift-MouseWheel>",
+            lambda e: self.cal_canvas.xview_scroll(-1*(e.delta//120), "units"))
 
         # Tooltip
         self.tooltip = tk.Toplevel(self.root)
@@ -203,17 +236,17 @@ class XeniosApp:
         days_in_month = calendar.monthrange(year, month)[1]
         today = date.today()
 
-        # Διαστάσεις κελιών
-        DAY_W   = 36   # πλάτος στήλης ημέρας
-        ROW_H   = 34   # ύψος γραμμής δωματίου
-        HDR_H   = 38   # ύψος κεφαλίδας ημερών
-        LABEL_W = 110  # πλάτος αριστερής στήλης δωματίου
+        # Cell Dimentions 
+        DAY_W   = 36   # width of day column
+        ROW_H   = 34   # height of room row
+        HDR_H   = 38   # height of day header
+        LABEL_W = 110  # width of left room column
 
         total_w = LABEL_W + days_in_month * DAY_W + 4
         total_h = HDR_H + len(self.rooms) * ROW_H + 4
         c.configure(scrollregion=(0, 0, total_w, total_h))
 
-        # ── Κεφαλίδα ημερών ─────────────────────────────────────────────
+        # ── Day Headlines ─────────────────────────────────────────────
         for d in range(1, days_in_month + 1):
             x = LABEL_W + (d - 1) * DAY_W
             day_obj = date(year, month, d)
@@ -230,7 +263,7 @@ class XeniosApp:
         c.create_text(LABEL_W / 2, HDR_H / 2, text="Δωμάτιο",
                       fill="white", font=("Helvetica", 9, "bold"))
 
-        # ── Γραμμές δωματίων ────────────────────────────────────────────
+        # ── Room rows ────────────────────────────────────────────
         # Συγκεντρώνω κρατήσεις ανά δωμάτιο για τον τρέχοντα μήνα
         res_by_room: dict[str, list] = {r["id"]: [] for r in self.rooms}
         for res in self.reservations:
@@ -280,29 +313,53 @@ class XeniosApp:
                     continue
 
                 clip_start = max(r_start, month_start)
-                clip_end   = min(r_end,   date(year, month, days_in_month + 1)
-                                 if days_in_month < 31 else month_end)
+                # clip_end: δεν ξεπερνά τη μέρα days_in_month+1 του μήνα
+                month_after = date(year + (month // 12), (month % 12) + 1, 1)
+                clip_end    = min(r_end, month_after)
+
+                if clip_start >= clip_end:
+                    continue
 
                 bx0 = LABEL_W + (clip_start.day - 1) * DAY_W + 2
-                bx1 = LABEL_W + (min(clip_end.day, days_in_month)) * DAY_W - 2
+                # Αν clip_end είναι η 1η του επόμενου μήνα → εμφανίζεται μέχρι τέλος μήνα
+                end_day = days_in_month if clip_end >= month_after else clip_end.day - 1
+                end_day = max(end_day, clip_start.day)  # τουλάχιστον 1 μέρα
+                bx1 = LABEL_W + end_day * DAY_W - 2
                 by0, by1 = y0 + 5, y1 - 5
 
                 tag = f"res_{res['id']}"
+                rtype = room.get("type", "")
+                bar_color = ROOM_COLORS.get(rtype, CLR_RESERVED)
                 c.create_rectangle(bx0, by0, bx1, by1,
-                                   fill=CLR_RESERVED, outline="",
+                                   fill=bar_color, outline="",
                                    tags=(tag,))
                 # Κεντράρω το όνομα μέσα στην ταινία
                 mid_x = (bx0 + bx1) / 2
-                name_short = res["name"].split()[0][:10]
+                bar_width = bx1 - bx0
+                suffix = ""
+                if res.get("extra_bed"):  suffix += " 🛏️"
+                if res.get("baby_cot"):   suffix += " 👶"
+
+                full_name = res["name"] + suffix
+                short_name = res["name"].split()[0][:10] + suffix
+
+                # Εκτίμηση πλάτους κειμένου: ~6.5px ανά χαρακτήρα για Helvetica 8
+                CHAR_WIDTH = 6.5
+                display_name = full_name if len(full_name) * CHAR_WIDTH < bar_width - 8 else short_name
+
                 c.create_text(mid_x, (by0 + by1) / 2,
-                              text=name_short, fill="white",
-                              font=("Helvetica", 8, "bold"),
-                              tags=(tag,))
+                            text=display_name, fill="white",
+                            font=("Helvetica", 8, "bold"),
+                            tags=(tag,))
 
                 # Tooltip
-                tip_text = (f"{res['name']}  |  {res['phone']}\n"
+                extras_tip = []
+                if res.get("extra_bed"): extras_tip.append("🛏️ Έξτρα ράντζο")
+                if res.get("baby_cot"):  extras_tip.append("👶 Παρκοκρέβατο")
+                extras_line = ("  |  " + "  ".join(extras_tip)) if extras_tip else ""
+                tip_text = (f"{res['name']}  | Επικοινωνία: {res['contact']}{extras_line}\n"
                             f"Άφιξη: {fmt(r_start)}  Αναχ: {fmt(r_end)}\n"
-                            f"Σύνολο: {res.get('total_price', '—')}€")
+                            f"Τιμή ανά βράδυ: {res.get('price_per_night', '—')}€")
                 c.tag_bind(tag, "<Enter>",
                            lambda e, t=tip_text: self._show_tip(e, t))
                 c.tag_bind(tag, "<Leave>", self._hide_tip)
@@ -341,9 +398,9 @@ class XeniosApp:
         self.f_name = entry()
         self.f_name.grid(row=1, column=1, padx=(0, 20))
 
-        lbl("Τηλέφωνο").grid(row=1, column=2, sticky="e", padx=(0, 6))
-        self.f_phone = entry(16)
-        self.f_phone.grid(row=1, column=3)
+        lbl("Στοιχεία Επικοινωνίας").grid(row=1, column=2, sticky="e", padx=(0, 6))
+        self.f_contact = entry(24)
+        self.f_contact.grid(row=1, column=3)
 
         # Γραμμή 2: Δωμάτιο · Τιμή/βράδυ
         lbl("Δωμάτιο").grid(row=2, column=0, sticky="e", padx=(0, 6), pady=5)
@@ -365,9 +422,26 @@ class XeniosApp:
         self.f_checkout = entry(12)
         self.f_checkout.grid(row=3, column=3)
 
+        # Γραμμή 4: Extras
+        self.f_extra_bed = tk.BooleanVar(value=False)
+        self.f_baby_cot  = tk.BooleanVar(value=False)
+
+        extras_frame = tk.Frame(card, bg=CLR_PANEL)
+        extras_frame.grid(row=4, column=0, columnspan=4, pady=(10, 0), sticky="w", padx=(60, 0))
+
+        tk.Checkbutton(extras_frame, text="🛏️  Έξτρα ράντζο",
+                       variable=self.f_extra_bed, bg=CLR_PANEL,
+                       fg=CLR_TEXT, font=("Helvetica", 10),
+                       activebackground=CLR_PANEL, cursor="hand2").pack(side="left", padx=(0, 30))
+
+        tk.Checkbutton(extras_frame, text="👶  Παρκοκρέβατο",
+                       variable=self.f_baby_cot, bg=CLR_PANEL,
+                       fg=CLR_TEXT, font=("Helvetica", 10),
+                       activebackground=CLR_PANEL, cursor="hand2").pack(side="left")
+
         # Κουμπιά
         btn_row = tk.Frame(card, bg=CLR_PANEL)
-        btn_row.grid(row=4, column=0, columnspan=4, pady=(18, 4))
+        btn_row.grid(row=5, column=0, columnspan=4, pady=(18, 4))
 
         tk.Button(btn_row, text="✔  Προσθήκη Κράτησης",
                   bg=CLR_FREE, fg="white", relief="flat",
@@ -381,22 +455,28 @@ class XeniosApp:
                   padx=14, pady=6,
                   command=self._delete_reservation).pack(side="left", padx=8)
 
+        tk.Button(btn_row, text="✏️  Επεξεργασία",
+                  bg=CLR_TODAY, fg="white", relief="flat",
+                  font=("Helvetica", 11, "bold"), cursor="hand2",
+                  padx=14, pady=6,
+                  command=self._load_for_edit).pack(side="left", padx=8)
+
         self.f_status = tk.Label(card, text="", bg=CLR_PANEL,
                                  fg=CLR_ACCENT, font=("Helvetica", 10, "italic"),
                                  wraplength=480)
-        self.f_status.grid(row=5, column=0, columnspan=4, pady=(8, 0))
+        self.f_status.grid(row=6, column=0, columnspan=4, pady=(8, 0))
 
         # Λίστα κρατήσεων
         sep = tk.Frame(self.tab_form, bg=CLR_BORDER, height=1)
         sep.pack(fill="x", padx=20, pady=4)
 
-        cols = ("room", "type", "name", "phone", "checkin", "checkout", "nights", "total")
+        cols = ("room", "type", "name", "contact", "checkin", "checkout", "nights", "total")
         col_lbl = {
             "room": "Δωμάτιο", "type": "Τύπος", "name": "Πελάτης",
-            "phone": "Τηλέφωνο", "checkin": "Άφιξη", "checkout": "Αναχώρηση",
+            "contact": "Στοιχεία Επικοινωνίας", "checkin": "Άφιξη", "checkout": "Αναχώρηση",
             "nights": "Νύχτες", "total": "Σύνολο (€)"
         }
-        col_w = {"room": 80, "type": 90, "name": 160, "phone": 110,
+        col_w = {"room": 80, "type": 90, "name": 160, "contact": 110,
                  "checkin": 75, "checkout": 80, "nights": 60, "total": 90}
 
         tree_frame = tk.Frame(self.tab_form, bg=CLR_BG)
@@ -419,16 +499,12 @@ class XeniosApp:
     def _add_reservation(self):
         try:
             name  = self.f_name.get().strip()
-            phone = self.f_phone.get().strip()
+            contact = self.f_contact.get().strip()
             price_txt = self.f_price.get().strip()
             room_sel  = self.f_room.current()
 
-            if room_sel < 0 or not name or not phone or not price_txt:
+            if room_sel < 0 or not name or not contact or not price_txt:
                 messagebox.showerror("Σφάλμα", "Συμπλήρωσε όλα τα πεδία.")
-                return
-
-            if not validate_phone(phone):
-                messagebox.showerror("Σφάλμα", "Μη έγκυρος αριθμός τηλεφώνου.")
                 return
 
             try:
@@ -467,11 +543,13 @@ class XeniosApp:
                 "id":             str(uuid.uuid4()),
                 "room_id":        selected_room["id"],
                 "name":           name,
-                "phone":          phone,
+                "contact":        contact,
                 "checkin":        to_storage(checkin),
                 "checkout":       to_storage(checkout),
                 "price_per_night": price_per_night,
                 "total_price":    total_price,
+                "extra_bed":      self.f_extra_bed.get(),
+                "baby_cot":       self.f_baby_cot.get(),
             }
 
             self.reservations.append(new_res)
@@ -485,10 +563,12 @@ class XeniosApp:
                      f"({nights} νύχτες × {price_per_night}€ = {total_price}€)"
             )
             # Καθαρισμός πεδίων
-            for w in (self.f_name, self.f_phone, self.f_price,
+            for w in (self.f_name, self.f_contact, self.f_price,
                       self.f_checkin, self.f_checkout):
                 w.delete(0, "end")
             self.f_room.set("")
+            self.f_extra_bed.set(False)
+            self.f_baby_cot.set(False)
 
         except ValueError as e:
             messagebox.showerror("Σφάλμα", "Χρησιμοποίησε τη μορφή ΗΗ/ΜΜ για τις ημερομηνίες.")
@@ -504,18 +584,12 @@ class XeniosApp:
                                    f"(δωμ. {vals[0]});"):
             return
 
-        # Αναγνώριση μέσω room+name+checkin display
-        checkin_storage = datetime.strptime(
-            str(vals[4]), "%d-%m").replace(year=CURRENT_YEAR).strftime("%Y-%m-%d")
+        # Αναγνώριση μέσω UUID που αποθηκεύεται στο tag του treeview item
+        item_id = self.tree.item(sel[0], "tags")[0]
 
         self.reservations = [
             r for r in self.reservations
-            if not (
-                next((rm for rm in self.rooms if rm["id"] == r["room_id"]),
-                     {}).get("number") == vals[0]
-                and r["name"] == vals[2]
-                and r["checkin"] == checkin_storage
-            )
+            if r["id"] != item_id
         ]
         save_json(RESERVATIONS_FILE, self.reservations)
         self._refresh_list()
@@ -525,23 +599,76 @@ class XeniosApp:
     def _refresh_list(self):
         for row in self.tree.get_children():
             self.tree.delete(row)
-        for res in self.reservations:
+        for res in sorted(self.reservations, key=lambda r: r["name"].lower()):
             room = next((r for r in self.rooms if r["id"] == res["room_id"]), None)
             if not room:
                 continue
             r_s = date_from_storage(res["checkin"])
             r_e = date_from_storage(res["checkout"])
             nights = (r_e - r_s).days
-            self.tree.insert("", "end", values=(
+            self.tree.insert("", "end", tags=(res["id"],), values=(
                 room["number"],
                 room.get("type", ""),
                 res["name"],
-                res["phone"],
+                res["contact"],
                 fmt(r_s),
                 fmt(r_e),
                 nights,
                 f"{res['total_price']}€"
             ))
+
+    def _load_for_edit(self):
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showwarning("Προσοχή", "Επίλεξε μια κράτηση από τη λίστα.")
+            return
+
+        # Βρίσκουμε την κράτηση μέσω UUID (tag)
+        res_id = self.tree.item(sel[0], "tags")[0]
+        res = next((r for r in self.reservations if r["id"] == res_id), None)
+        if not res:
+            return
+
+        # Γέμισμα πεδίων με τα υπάρχοντα στοιχεία
+        self.f_name.delete(0, "end")
+        self.f_name.insert(0, res["name"])
+
+        self.f_contact.delete(0, "end")
+        self.f_contact.insert(0, res.get("contact", ""))
+
+        self.f_price.delete(0, "end")
+        self.f_price.insert(0, str(res.get("price_per_night", "")))
+
+        self.f_checkin.delete(0, "end")
+        self.f_checkin.insert(0, fmt(date_from_storage(res["checkin"])))
+
+        self.f_checkout.delete(0, "end")
+        self.f_checkout.insert(0, fmt(date_from_storage(res["checkout"])))
+
+        # Δωμάτιο
+        room = next((r for r in self.rooms if r["id"] == res["room_id"]), None)
+        if room:
+            room_names = [f"{r['number']} ({r.get('type','')})" for r in self.rooms]
+            idx = next((i for i, r in enumerate(self.rooms) if r["id"] == res["room_id"]), 0)
+            self.f_room.current(idx)
+
+        # Checkboxes
+        self.f_extra_bed.set(res.get("extra_bed", False))
+        self.f_baby_cot.set(res.get("baby_cot", False))
+
+        # Διαγραφή παλιάς εγγραφής και αποθήκευση UUID για ενημέρωση
+        self._editing_id = res_id
+        self.reservations = [r for r in self.reservations if r["id"] != res_id]
+        save_json(RESERVATIONS_FILE, self.reservations)
+        self._refresh_list()
+        self._refresh_calendar()
+
+        self.f_status.config(
+            fg=CLR_TODAY,
+            text=f"✏️  Επεξεργασία κράτησης για {res['name']} — τροποποίησε τα πεδία και πάτα «Προσθήκη»."
+        )
+        # Εστίαση στην καρτέλα φόρμας
+        self.notebook.select(self.tab_form)
 
     # ══════════════════════════════════════════════════════════════════════
     # TAB 3 · Διαθεσιμότητα (χειροκίνητη + συνολική)
@@ -573,8 +700,8 @@ class XeniosApp:
         self.a_checkout.grid(row=1, column=3)
 
         lbl("Τύπος δωματίου").grid(row=2, column=0, sticky="e", padx=(0, 6), pady=6)
-        self.a_type = ttk.Combobox(card, values=["Όλοι", "τετράκλινο",
-                                                  "τρίκλινο", "δίκλινο"],
+        self.a_type = ttk.Combobox(card, values=["Όλοι", "Τετράκλινο",
+                                                  "Τρίκλινο", "Δίκλινο"],
                                    width=13, state="readonly",
                                    font=("Helvetica", 10))
         self.a_type.current(0)
@@ -648,7 +775,7 @@ class XeniosApp:
                 free_t = sum(1 for r in free_rooms if r.get("type") == rtype)
                 total_t = sum(1 for r in self.rooms if r.get("type") == rtype)
                 tk.Label(breakdown,
-                         text=f"■  {rtype.capitalize()}: "
+                         text=f"■  {rtype}: "
                               f"{free_t}/{total_t} διαθέσιμα",
                          fg=color, bg=CLR_PANEL,
                          font=("Helvetica", 10, "bold")).pack(
