@@ -5,9 +5,22 @@ import os
 import uuid
 import calendar
 from datetime import datetime, date
+from PIL import Image, ImageTk  # pip install pillow
+import sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+
+def resource_path(relative_path):
+    """This part helps to find the correct path for resources when using PyInstaller."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
+
+BASE_DIR = resource_path("")
+if hasattr(sys, '_MEIPASS'):
+    # Τρέχει ως .exe — αποθήκευση δίπλα στο εκτελέσιμο
+    DATA_DIR = os.path.join(os.path.dirname(sys.executable), "data")
+else:
+    DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 ROOMS_FILE = os.path.join(DATA_DIR, "rooms.json")
 RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservations.json")
 
@@ -39,7 +52,6 @@ ROOM_COLORS = {
     "Τρίκλινο":   "#16A085",
     "Δίκλινο":    "#2980B9",
 }
-
 
 # ── JSON helpers ────────────────────────────────────────────────────────────
 def load_json(path):
@@ -82,7 +94,19 @@ def validate_contact(contact: str) -> bool:
 class XeniosApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("Xenios · Version_0.5")
+        self.root.title("Xenios · Version_1.0")
+
+        # Icon title bar (.ico)
+        ico_path = os.path.join(BASE_DIR, "logo.ico")
+        if os.path.exists(ico_path):
+            self.root.iconbitmap(ico_path)
+
+        # Logo header (.png)
+        png_path = os.path.join(BASE_DIR, "logo.png")
+        if os.path.exists(png_path):
+            img = Image.open(png_path).resize((38, 38), Image.LANCZOS)
+            self._logo_img = ImageTk.PhotoImage(img)  # αποθήκευση σε self για να μην το κάνει garbage collect
+
         self.root.configure(bg=CLR_BG)
         self.root.minsize(1000, 680)
 
@@ -113,8 +137,10 @@ class XeniosApp:
         # Κεφαλίδα
         hdr = tk.Frame(self.root, bg=CLR_HEADER, height=54)
         hdr.pack(fill="x")
-        tk.Label(hdr, text="✦  XENIOS", bg=CLR_HEADER, fg="white",
-                 font=("Playwrite New Zealand", 18, "bold")).pack(side="left", padx=20, pady=12)
+        if hasattr(self, '_logo_img'):
+            tk.Label(hdr, image=self._logo_img, bg=CLR_HEADER).pack(side="left", padx=(16, 6), pady=8)
+        tk.Label(hdr, text="XENIOS", bg=CLR_HEADER, fg="white",
+                font=("Playwrite New Zealand", 18, "bold")).pack(side="left", padx=(0, 20), pady=12)
         tk.Label(hdr, text="CUSTOM RESERVATION SOLUTIONS", bg=CLR_HEADER,
                  fg="#A8C6E0", font=("Helvetica", 10)).pack(side="left", pady=14)
 
