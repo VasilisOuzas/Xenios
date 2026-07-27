@@ -15,7 +15,7 @@
 # Overview
 Xenios is a custom software solution ,helping people of the hospitality industry to plan accomodations at their facilities with an easier and more effective way. This open source project helps hotelers and room renters create and manage lists on a calendar-based system. It provides high customizability and flexibility regarding the different types of information that can be noted for each accommodation. Although there are similar open source projects, most of them are web based and their user inderface can feel rather complex and outdated at times. Xenios uses a modern, vivid GUI and needs no access to the internet to work. It uses .json files to save and modify all the data (/data directory). All the work is done localy on the users computer (fow the time being Xenios is only supported on windows devices. I am currently working on a working version for linux). All the work is done through python and the code is available at the [main.py](https://github.com/VasilisOuzas/Xenios/blob/main/src/main.py) file.
 
-# Current-Version (v.0.1)
+# Current-Version (v.1.0)
 Following the previous v.0.7 ([v.0.7 code_report.md](https://github.com/VasilisOuzas/Xenios/commit/d9c9e438e1dea038a2b111fd6e458207ff963800)) the application was updated with a visual upgrade, showing which rooms have extra camp beds or baby coats. The leatest version also includes a reservation edit tool that helps the user to edit all detail of amy reservation from the list, which now is alphabeticaly sorted. Moreover, if the reservation is long enough on the calendar, it will include the full name instead of only the last/first name compared to previous versions.
 
 
