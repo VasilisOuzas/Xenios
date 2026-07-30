@@ -17,12 +17,15 @@ def resource_path(relative_path):
 
 BASE_DIR = resource_path("")
 if hasattr(sys, '_MEIPASS'):
-    # Τρέχει ως .exe — αποθήκευση δίπλα στο εκτελέσιμο
-    DATA_DIR = os.path.join(os.path.dirname(sys.executable), "data")
+    BASE = os.path.dirname(sys.executable)
 else:
-    DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-ROOMS_FILE = os.path.join(DATA_DIR, "rooms.json")
-RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservations.json")
+    BASE = os.path.dirname(os.path.abspath(__file__))
+
+DATA_DIR_LANG   = os.path.join(BASE, "data_GR")    # rooms στα ελληνικά
+DATA_DIR_SHARED = os.path.join(BASE, "data")        # κοινά reservations
+
+ROOMS_FILE        = os.path.join(DATA_DIR_LANG,   "rooms.json")
+RESERVATIONS_FILE = os.path.join(DATA_DIR_SHARED, "reservations.json")
 
 # ── Μορφή ημερομηνίας: ΗΗ-ΜΜ παντού (χωρίς έτος στο UI) ──────────────────
 DATE_FORMAT = "%d/%m"   
@@ -66,9 +69,9 @@ def save_json(path, data):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
-# ── Ημερομηνίες ────────────────────────────────────────────────────────────
+# ── dates ────────────────────────────────────────────────────────────
 def parse_date(text: str) -> date:
-    """ΗΗ-ΜΜ → date (τρέχον έτος)"""
+    """ΗΗ-ΜΜ → date (current year)"""
     d, m = map(int, text.strip().split("/"))
     return date(CURRENT_YEAR, m, d)
 
@@ -326,6 +329,9 @@ class XeniosApp:
 
             # Κρατήσεις ως χρωματιστές ταινίες
             for res in res_by_room[room["id"]]:
+                # Skip the reservation being edited — it will be replaced
+                #if hasattr(self, '_editing_id') and self._editing_id == res["id"]:
+                #    continue
                 try:
                     r_start = date_from_storage(res["checkin"])
                     r_end   = date_from_storage(res["checkout"])
@@ -541,7 +547,6 @@ class XeniosApp:
 
             checkin  = parse_date(self.f_checkin.get())
             checkout = parse_date(self.f_checkout.get())
-
             if checkin >= checkout:
                 messagebox.showerror("Σφάλμα", "Η αναχώρηση πρέπει να είναι μετά την άφιξη.")
                 return
@@ -551,6 +556,9 @@ class XeniosApp:
             # Έλεγχος διαθεσιμότητας για το συγκεκριμένο δωμάτιο
             for res in self.reservations:
                 if res["room_id"] != selected_room["id"]:
+                    continue
+                # Skip the reservation being edited — it will be replaced
+                if hasattr(self, '_editing_id') and self._editing_id == res["id"]:
                     continue
                 r_s = date_from_storage(res["checkin"])
                 r_e = date_from_storage(res["checkout"])
@@ -566,7 +574,7 @@ class XeniosApp:
             total_price = round(nights * price_per_night, 2)
 
             new_res = {
-                "id":             str(uuid.uuid4()),
+                "id": self._editing_id if hasattr(self, '_editing_id') and self._editing_id else str(uuid.uuid4()), #logic to detect if there is an editing_id that can be replaced, otherwise generate a new UUID
                 "room_id":        selected_room["id"],
                 "name":           name,
                 "contact":        contact,
@@ -577,6 +585,11 @@ class XeniosApp:
                 "extra_bed":      self.f_extra_bed.get(),
                 "baby_cot":       self.f_baby_cot.get(),
             }
+
+             #if we're in edit mode, we need to remove the old reservation with the same id before adding the new one
+            if hasattr(self, '_editing_id') and self._editing_id:
+                self.reservations = [r for r in self.reservations if r["id"] != self._editing_id]
+                self._editing_id = None  # reset editing id after saving
 
             self.reservations.append(new_res)
             save_json(RESERVATIONS_FILE, self.reservations)
@@ -682,12 +695,8 @@ class XeniosApp:
         self.f_extra_bed.set(res.get("extra_bed", False))
         self.f_baby_cot.set(res.get("baby_cot", False))
 
-        # Διαγραφή παλιάς εγγραφής και αποθήκευση UUID για ενημέρωση
+        
         self._editing_id = res_id
-        self.reservations = [r for r in self.reservations if r["id"] != res_id]
-        save_json(RESERVATIONS_FILE, self.reservations)
-        self._refresh_list()
-        self._refresh_calendar()
 
         self.f_status.config(
             fg=CLR_TODAY,
