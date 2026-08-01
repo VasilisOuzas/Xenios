@@ -14,4 +14,4 @@ python3 -c "import tkinter" 2>/dev/null || {
     exit 1
 }
 
-python3 launcher.py
+python3 Xenios_EN.py
