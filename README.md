@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/logo.png" alt="Xenios" width="120" />
   <h1>Xenios</h1>
-  <p>A an application for hospitality.</p>
+ 
 
   <p>
     <a href="https://github.com/VasilisOuzas/Xenios/releases/latest"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/VasilisOuzas/Xenios?style=for-the-badge&logo=github&color=1a1a2e&labelColor=0d0d0d"/></a>
@@ -25,7 +25,7 @@ The user downloads the [xenios.v.1.1.zip](https://github.com/VasilisOuzas/Xenios
 ```
 [{"id": 1, "number": "1", "type": "Single"},
   {"id": 2, "number": "2", "type": "Double"},
-  {"id": 3, "number": "3", "type": "Triple"},]
+  {"id": 3, "number": "3", "type": "Triple"}]
 ```
 After the rooms.json has been modified, the user can simply run the Xenios_GR.exe or Xenios_EN.exe . The "callendar"/"Ημερολόγιο" tab inlcudes the calendar/matrix that is arranged according to the rooms.json. Hovering on any reservation will show you information about them. you can navigate through the months via the arrows on the top left corner. On the "New Reservation"/"Νέα Κράτηση" tab, the user inputs new reservations. If the room/rooms are already reserved for the wanted period, they get promted an error message telling them that there is a dates conflit with another reservation. All the reservations done (which already exist in the data/reservations.json) are alphabetically sorted in the list below. Clicking/selecting a reservation enables you to modify it. By clicking "Modify"/"Επεξεργασία" after selecting a reservation you will see all the saved data displayed on the inputs which you can modify again, to save the modified data, you simply click "add reservation"/"Πρσθήκη Κράτησης". Deleting reservations is as simple as selecting them and then clicking "Delete Reservation"/"Διγραφή Κράτησης". Additionaly, the third and last tab acts as a way to check the availability of the room types that you are interesetd in making a reservation for a specific time period. The app informs  this way the user about the available rooms. 
 
