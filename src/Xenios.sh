@@ -50,4 +50,4 @@ $PIP install --quiet pillow
 
 # ── Launch ──────────────────────────────────────────────────────────────
 echo "Starting Xenios..."
-python3 launcher.py
+python3 Xenios_EN.py
