@@ -126,6 +126,9 @@ class XeniosApp:
         self._build_ui()
         self._refresh_calendar()
 
+        # Redraw calendar whenever the window is resized
+        self.cal_canvas.bind("<Configure>", lambda e: self._refresh_calendar())
+
         # Auto-fit: measures what is needed and opens there
         self.root.update_idletasks()
         w = self.root.winfo_reqwidth()
@@ -268,14 +271,26 @@ class XeniosApp:
         days_in_month = calendar.monthrange(year, month)[1]
         today = date.today()
 
-        # Cell Dimentions 
-        DAY_W   = 36   # width of day column
-        ROW_H   = 34   # height of room row
-        HDR_H   = 38   # height of day header
-        LABEL_W = 110  # width of left room column
+        # Cell dimensions — dynamic based on canvas size
+        c.update_idletasks()
+        canvas_w = c.winfo_width()
+        canvas_h = c.winfo_height()
 
-        total_w = LABEL_W + days_in_month * DAY_W + 4
-        total_h = HDR_H + len(self.rooms) * ROW_H + 4
+        HDR_H   = 38                          # fixed header height
+        LABEL_W = 110                         # fixed room label width
+
+        # DAY_W: stretch columns to fill the canvas width
+        # but never smaller than 28px (readability)
+        available_w = canvas_w - LABEL_W
+        DAY_W = max(28, available_w // days_in_month)
+
+        # ROW_H: stretch rows to fill the canvas height
+        # but never smaller than 28px
+        available_h = canvas_h - HDR_H
+        ROW_H = max(28, available_h // len(self.rooms)) if self.rooms else 34
+
+        total_w = LABEL_W + days_in_month * DAY_W
+        total_h = HDR_H + len(self.rooms) * ROW_H
         c.configure(scrollregion=(0, 0, total_w, total_h))
 
         # ── Day Headlines ─────────────────────────────────────────────
